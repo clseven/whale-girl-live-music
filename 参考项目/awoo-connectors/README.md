@@ -1,0 +1,297 @@
+# Awoo MusicBot Connectors
+
+Independent native player connectors for Awoo MusicBot.
+
+The repository intentionally contains no Awoo MusicBot UI, danmaku, account,
+permission, queue, HTTP API, or WebSocket server code. Each connector is built
+and versioned independently so a player compatibility fix does not require a
+new Awoo MusicBot core release.
+
+## Connectors
+
+| Connector | Executable | Release tag |
+| --- | --- | --- |
+| NetEase Cloud Music | `Awoo.Connector.Netease.exe` | `netease-vX.Y.Z` |
+| KuGou Music | `Awoo.Connector.Kugou.exe` | `kugou-vX.Y.Z` |
+| QQ Music | `Awoo.Connector.QQMusic.exe` | `qqmusic-vX.Y.Z` |
+| Folia | `Awoo.Connector.Folia.exe` | `folia-vX.Y.Z` |
+
+All connectors use newline-delimited JSON on standard input/output. Protocol
+version 1 supports `ping`, `probe`, `search`, `execute`, and `shutdown`.
+Optional features are negotiated independently, so adding one does not break
+older cores or connectors. NetEase `3.1.37.205354.7` advertises
+`snapshot-events-v1`; a new core subscribes with `subscribe` and receives exact
+snapshot event envelopes, while an older core continues to use `probe`.
+
+QQ Music connector 22.76.1 supports the reviewed QQ 22.76 build and retains
+QQ 22.71 support using schema 2 compatibility profiles. Exact DLL fingerprints,
+call addresses and the CString manager getter are data; the connector implements
+only named, reviewed native calling conventions. A signed profile can describe
+another build of an existing convention without recompiling the connector.
+Unknown conventions still require a connector update. Runtime capabilities now
+reflect the actual executable profile, and unsupported versions stop automatic
+queue operations while retaining search and manual playback controls. This
+snapshot capability contract requires Awoo MusicBot 1.2.5. The profile catalog
+keeps its legacy entry and adds a separate schema 2 entry for updated clients.
+
+QQ Music connector 22.71.5 retries a primary search once after a short delay
+when QQ returns business code 2001. Both primary attempts and their delay share
+the existing five-second primary budget; the complete search retains its
+twelve-second limit and one legacy fallback. Errors identify the response code
+layer and request attempts without logging queries or response bodies. This
+retry applies only to read-only search and does not repeat native insertion.
+
+QQ Music connector 22.71.4 corrects the public search request context that
+returned empty lists for known songs. It also fixes native insertion's by-value
+CString ownership, uses an explicit completion marker instead of an undefined
+native return value, and stops automatic playback commands after an uncertain
+insertion. The corrected native string ABI is gated to the verified QQ 22.71
+binary; unreviewed player branches cannot execute the former bare-string call.
+Explicit player controls and restoration of the captured mute state remain
+available. Pending native journals stay blocked across connector reconnects.
+
+QQ Music connector 22.71.3 fixes search requests being abandoned when the
+primary catalog returns an HTTP error, times out, or returns an invalid response.
+It tries the existing alternate search endpoint once within a shared timeout
+budget, respects caller cancellation, and identifies the failed endpoints in
+errors without logging search text or response bodies. Native insertion and
+the minimum core version remain unchanged.
+
+QQ Music connector 22.71.2 uses the reviewed Type 4 IPC command for type-0 songs
+on the exact QQ 22.71 installation, avoiding the auxiliary QQ process launch.
+It accelerates PE analysis and window inspection while retaining every profile
+check. Completed insertions can be repeated; uncertain operations remain blocked
+for the QQ process lifetime in a durable journal shared across connector versions.
+Each exposed trampoline retains 4 KiB until QQ exits to avoid freeing code before
+its return. Other supported QQ branches keep their previous transport. Nonzero
+song types on 22.71 are rejected before mutation. This local build is documented
+in [22.71.2 validation](docs/QQMUSIC_22_71_2_VALIDATION.md).
+
+QQ Music connector 22.71.1 added an exact profile for QQ Music 22.71 while keeping
+the native implementation restored in 22.61.5, without the Web bridge or its
+ownership contract. It includes exact compatibility profiles for QQ Music
+22.22, 22.41, 22.51, 22.52, 22.60, 22.61, and 22.71. On a matching DLL hash it calls QQ's internal
+`AddSongs(mode=0)` path to insert exactly one song after the current item, then
+uses QQ's normal Next command. Both immediate play and guarded fallback preserve
+the host playlist instead of rebuilding or appending to it. The mute/pause guard
+remains active until the requested track is confirmed, so a failed native insert
+does not silently fall back to the queue-breaking `/playbysongid` path.
+This restoration remains version/hash locked; it does not claim tolerance of
+unknown QQ updates. Its v2 minimum core version is 1.1.10. The Web revisions
+22.61.2–22.61.4 retain their 1.2.1 core requirement; published historical assets
+are not changed or replaced.
+
+The 22.71 profile targets installation build `QQMusic2271.00.25.13` and both
+exact DLL hashes. One live Shelter insertion returned accepted; the user
+confirmed the next position, preserved queue, no focus steal and normal playback.
+See [22.71 validation](docs/QQMUSIC_22_71_VALIDATION.md) for the
+static evidence and test limits. Adding this profile does not
+change the native insertion algorithm.
+
+QQ Music profile pack 1.3.0 delivered the QQ Music 22.61 profile independently
+and was validated with the unchanged released 22.60.2 connector. Connector
+22.61.1 now carries the same validated profile so its public version follows the
+QQ 22.61 player branch. External profiles must be available before connector
+startup; reconnect after the core downloads one.
+See [22.61 validation](docs/QQMUSIC_22_61_VALIDATION.md) for the live-test results,
+the conservative insertion response, and the current core's offline limitation.
+
+The QQ audio-session guard enumerates every active Windows Render endpoint, so QQ
+Music routed to a non-default output device still contributes playback evidence.
+An unavailable endpoint is reported diagnostically and does not prevent other
+endpoints from being inspected.
+
+The QQ connector advertises `snapshot-events-v1`. It combines Windows global
+media-session `MediaPropertiesChanged`, `PlaybackInfoChanged`, and
+`TimelinePropertiesChanged` notifications with
+`SetWinEventHook(EVENT_OBJECT_NAMECHANGE)`, so the core does not run its former
+350 ms QQ state poll. The guarded-next path consumes the same event stream
+instead of reading the window title every 2 ms. Near a natural track ending it
+uses the latest media timeline to arm one pre-mute timer for 450 ms before the
+estimated end; timeline and playback events cancel and reschedule that timer.
+
+QQ Music connector 22.52.1 includes the signed QQ Music 22.52 profile and also
+treats the explicit instrumental suffixes
+`(纯音乐)`, `(Inst.)`, and `(Instrumental)` as aliases only when the base title
+and artist both match. Live, Remix, and unrelated versions remain distinct, so
+the guarded-next verifier can accept QQ's alternate instrumental label without
+weakening stable song-ID matching.
+
+Unknown QQ Music builds are rejected safely. The connector can submit an
+anonymous compatibility report containing only the player/connector versions,
+DLL SHA-256 values and analyzer results. It never uploads QQ Music binaries,
+local paths, accounts, cookies, playlists or song history. A signed profile pack
+can then add support without publishing a new Awoo MusicBot core release.
+
+KuGou connector 20.0.81.4 no longer uses KuGou's queue-rebuilding immediate-play
+payload. Immediate play and guarded fallback both insert exactly one track after
+the current item, then send KuGou's targeted internal Next command. This keeps
+the host playlist order intact and avoids the old append-and-loop behavior. On the
+verified 20.0.81.27563 kugou.dll profile, a bounded anchor-history reset runs
+before a new InsertNext send so the current item does not change. Unknown or
+failed profiles retain the old guarded fallback and explicitly ask the user to
+update the KuGou connector.
+
+KuGou connector 20.1.41.1 also keeps current-track identity stable when the
+desktop ticker temporarily changes spacing, appends a localized title, or falls
+back to an older `KuGou.ini` value. Confirmed native IDs remain authoritative,
+while distinct native IDs and real title changes still advance normally.
+
+KuGou connector 20.1.41.2 recognizes 64-bit KuGou, including 20.1.41.27870.
+The x86 connector cannot read a 64-bit module list, so it reads the player
+version from the executable path and the bitness from `IsWow64Process2`. The
+anchor-history reset stays limited to the verified x86 20.0.81.27563 profile;
+64-bit KuGou reports `检测到 64 位酷狗（版本 X），无切歌插入暂不支持，已使用兼容插入`
+and uses the compatible insertion path. When the playing caption matches a song
+the connector itself inserted through IPC, that exact song keeps its identity
+instead of another recording with the same title and artist from the title
+search.
+
+The Folia connector talks only to the local Stage HTTP/WebSocket service on
+port 32107. Awoo MusicBot passes the compatibility environment variable
+`BILINCM_FOLIA_TOKEN` to the child process at
+startup; the token is not written into the connector installation. Numeric
+NetEase IDs are validated in parallel with Stage search, and exact ID results
+include song, artist, album, and cover metadata.
+
+Direct request formats are intentionally player-specific:
+
+- NetEase treats `id=<numeric song ID>` as explicit. A bare numeric value of
+  at least six digits runs exact ID lookup and keyword search in parallel;
+  the exact ID wins when it exists, otherwise the keyword result is used.
+- KuGou accepts a temporary numeric KuGou code with optional surrounding `#`,
+  or a permanent `m.kugou.com/share/song.html?chain=...` link, `chain=...`, or
+  the bare alphanumeric chain value. KuGou does not treat `id=` as a code.
+- QQ Music accepts its `c6.y.qq.com/base/fcgi-bin/u?__=...` share URL,
+  `u?__=...`, or a bare 12-character share code. Ordinary numeric text is not
+  reinterpreted as a QQ song ID.
+
+The NetEase connector does not start a remote debugging port and does not
+restart the player with debugging flags. Its version-locked native bridge uses
+CEF's in-process DevTools host to subscribe to the player's existing Redux
+store. Track-change notifications therefore include the exact current song,
+cover and sequential next song as events. A dedicated named-pipe long wait
+forwards these changes to the connector, which then pushes them to the core;
+the core no longer performs its old 350 ms state poll when this feature is
+active. The connector reads the native window title only as a startup/stale-
+bridge fallback: every 2 seconds while the event bridge is unavailable, and at
+most once every 5 minutes while Redux events and the 15-second state heartbeat
+remain healthy.
+
+NetEase `3.1.37.205354.8` also handles overseas API behavior. Search requests
+use a Chinese routing header because the public endpoint returns an encrypted
+string instead of a result object to some US IPs. Album artwork is served from
+the `app.enkianss.us/connectors/v1/covers/netease/` route in the main download
+Worker. It accepts only a signed NetEase image token plus a numeric picture ID
+and therefore is not an open proxy.
+
+NetEase `3.1.38.205386.1` recognizes rate-limited search responses instead of
+reporting a false empty result, falls back across the compatible search
+endpoints, and compares canonically equivalent Unicode song metadata safely.
+
+NetEase `3.1.41.205529.2` supports player `3.1.41.205529` with an explicit
+CEF ABI profile. The profile verifies the exact CEF version, both API hashes,
+commit and native call targets, then requires a real DevTools callback before
+reporting ready. Bridge installation failures retain the probe's detailed
+reason, including ABI mismatches. The previous 91.2.2 profile remains available;
+unknown ABI profiles are rejected without calling them. See
+[`docs/NETEASE_3_1_41_VALIDATION.md`](docs/NETEASE_3_1_41_VALIDATION.md)
+for the validation evidence and manual acceptance scope.
+
+## Versioning
+
+The three desktop-player connectors use player-scoped versions whose final
+component is the connector revision:
+
+- NetEase `3.1.41.205529` -> connector `3.1.41.205529.2`
+- KuGou `20.1.41.27870` -> connector `20.1.41.1`
+- QQ Music `22.61` -> connector `22.61.5`
+
+KuGou deliberately omits its noisy final client build component:
+
+`KUGOU_MAJOR.KUGOU_MINOR.KUGOU_FEATURE.CONNECTOR_REVISION`
+
+For example, the previously validated KuGou `20.0.81.27563` uses connector
+branch `20.0.81`, so its first connector release is `20.0.81.1` and its
+validated anchor-reset revision is `20.0.81.4`. The native anchor-reset profile
+remains exact to that player build and `kugou.dll` hash. The tested KuGou
+`20.1.41.27870` is a new player branch, so this current-track identity fix is
+the first connector revision, `20.1.41.1`; that version does not imply a
+validated `20.1.41` native anchor-reset profile. The noisy final KuGou build
+component (`27870`) is recorded for diagnostics but does not create another
+compatibility branch. Higher connector revisions on the same player branch
+update automatically; a player-version branch change is manual-only. The QQ
+connector can continue to carry signed compatibility profiles for older builds
+such as 22.22 even when its release branch follows the newest tested build.
+
+Folia retains the independent three-part scheme because Stage API does not
+expose a desktop-player version:
+
+- Increase `PLAYER` and reset `PATCH` to `0` only when the connector adds or
+  changes its supported player-version compatibility baseline.
+- Increase only `PATCH` for fixes and features that keep the same supported
+  player-version baseline.
+- `MAJOR` is reserved for incompatible connector protocol or packaging changes.
+
+For Folia, the Stage API contract is treated as the player-version baseline.
+
+## Build
+
+The commands below are useful for local connector development. The forward
+release workflow uses the framework-dependent form (`--self-contained false`);
+the self-contained form remains documented only for reproducing or inspecting
+the frozen v1 packages.
+
+```powershell
+dotnet publish .\src\Netease\BiliNCM.Connector.Netease.csproj -c Release -r win-x64 --self-contained true
+dotnet publish .\src\Kugou\BiliNCM.Connector.Kugou.csproj -c Release -r win-x86 --self-contained true
+dotnet publish .\src\QQMusic\BiliNCM.Connector.QQMusic.csproj -c Release -r win-x86 --self-contained true
+dotnet publish .\src\Folia\BiliNCM.Connector.Folia.csproj -c Release -r win-x86 --self-contained true
+```
+
+## Update catalog
+
+The published v1 catalog remains available for older clients:
+
+`https://app.enkianss.us/connectors/v1/catalog.json`
+
+It is a frozen compatibility snapshot. Its self-contained packages, signed
+legacy-name aliases, old Tags and Release assets are not deleted or repointed;
+Awoo MusicBot 1.1.0-1.1.9 continues to use that contract. Existing
+self-contained installations also remain runnable in 1.1.10.
+
+The forward catalog is kept separately in `catalog-v2.json` and is intended for
+Awoo MusicBot 1.1.10 and newer:
+
+`https://app.enkianss.us/connectors/v2/catalog.json`
+
+Every v2 connector entry has `minimumCoreVersion` of at least `1.1.10` and exactly one
+`package` object with `deployment: "framework-dependent"`. A future connector
+Release contains only the Awoo framework-dependent ZIP and its `.sig` and
+`.sha256` sidecars. The ZIP uses Awoo MusicBot's private, per-architecture .NET
+8 runtime; if the runtime or package cannot be installed, the existing
+connector remains active and the client reports the failure. No v2
+self-contained or `BiliNCM.*` archive is produced.
+
+Release assets are signed with Ed25519. Awoo MusicBot verifies both the
+signature and SHA-256 digest before activating a downloaded connector, and
+retains the previous version for rollback. See
+[`docs/CONNECTOR_V2_RELEASE.md`](docs/CONNECTOR_V2_RELEASE.md) for the exact
+tag, asset and proxy contract.
+
+Runtime packaging and connector protocol compatibility are independent. The
+v2 `minimumCoreVersion` has a catalog-schema floor: it prevents old cores
+from interpreting the forward-only `package` field as a v1 entry, not a claim
+that the connector protocol changed. A backend may need a higher core version
+for behavior contracts: QQ Web revisions 22.61.2–22.61.4 require 1.2.1, while
+the restored native 22.61.5 uses the 1.1.10 floor. QQ Music compatibility profiles retain
+their separate v1 catalog until a profile-specific migration is designed.
+
+QQ Music compatibility profiles have a separate signed update catalog:
+
+`https://app.enkianss.us/connectors/v1/profiles/qqmusic/catalog.json`
+
+The core checks this catalog when launching the QQ connector. A valid newer
+profile pack is installed in the background and passed to the connector through
+`BILINCM_QQMUSIC_PROFILE_DIR`; signature, hash or schema failures keep the
+built-in profiles active.

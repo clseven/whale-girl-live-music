@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const sandbox={window:{},document:{getElementById:()=>({}),addEventListener(){}},fetch:()=>new Promise(()=>{})};
+vm.runInNewContext(fs.readFileSync('assets/live2d/actor.js','utf8'),sandbox);
+const build=sandbox.window.whaleVisualParameters,catalog={'深色桌布':[{Id:'cc2',Value:1}],'蛋包饭':[{Id:'danbaofan',Value:1},{Id:'point',Value:-1}]};
+assert.equal(build(['深色桌布'],catalog,'rest','none','day').cc2,0);
+assert.equal(build(['蛋包饭'],catalog,'eat','none','night').cc2,1);
+assert.equal(build(['蛋包饭'],catalog,'eat','none','day').phone,0);
+assert.equal(build([],catalog,'rest','none','day').phone,0);
+assert.equal(build([],catalog,'phone','cat','night').phone,0);
+assert.equal(build([],catalog,'phone','none','night').phone,1);
+console.log('6 day/night table and phone/gesture parameter checks passed');

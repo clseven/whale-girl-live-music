@@ -1,0 +1,7 @@
+{
+  "codex_proxy": "",
+  "model": "gpt-6-luna",
+  "deepseek_model": "deepseek-flash",
+  "provider": "codex",
+  "codex_service_tier": "fast"
+}

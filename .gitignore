@@ -1,0 +1,25 @@
+.runtime/
+.venv/
+.cache/
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+audio/
+local-config.json
+.env
+.env.*
+!.env.example
+secrets.json
+auth.json
+*.log
+*.pid
+*.sqlite*
+*.db*
+*.zip
+*.exe
+*.dll
+**/vendor/netease/
+!**/vendor/netease/README.md
+
+# Live2D model, expressions, motions and stage images ARE part of this release.

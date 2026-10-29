@@ -1,0 +1,12 @@
+/* One capture material for Live Companion. No separate app or scene layout. */
+html.avatar-view,html.avatar-view body {background:transparent!important;overflow:hidden}
+html.avatar-view.chroma-view,html.avatar-view.chroma-view body {background:#00ff00!important}
+html.avatar-view .stage {width:100vw!important;height:100dvh!important;background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;overflow:hidden!important;aspect-ratio:auto!important}
+html.avatar-view .stage::before,html.avatar-view .stage::after,html.avatar-view .stage>:not(.whale-pane) {display:none!important}
+html.avatar-view .whale-pane {position:absolute;inset:0;background:transparent!important;pointer-events:none}
+html.avatar-view .whale-pane::before,html.avatar-view .whale-pane::after,html.avatar-view .scene-title {display:none!important}
+html.avatar-view .actor {left:5%!important;top:1%!important;width:90%!important;height:77%!important}
+html.avatar-view .bubble {display:block!important;left:5%!important;top:auto!important;bottom:3%!important;width:90%!important;box-sizing:border-box;max-height:21%;padding:.35em .65em;border:0;border-radius:.55em;background:rgba(16,28,44,.92);color:#fff;font-size:clamp(22px,4vw,72px);line-height:1.35;text-align:center;overflow-wrap:anywhere;box-shadow:none;filter:none}
+html.avatar-view .bubble::after {display:none!important}
+html.avatar-view .bubble[data-caption-empty="true"] {display:none!important}
+html.avatar-view #actorLoading {font-size:16px;color:#b9d2ed}
